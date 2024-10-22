@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from .models import User, OTP
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.utils.timezone import now
 import random
 from .serializers import *
 
@@ -23,10 +24,11 @@ class RegisterView(APIView):
             otp = random.randint(100000, 999999)
             OTP.objects.create(user=user, otp=otp)
 
-            #send_email
+            #send_mail
             send_mail(
                 'Verify ur email by this otp code',
                 f'Your OTP code is {otp}',
+                'devxhub',
                 [user.email],
                 fail_silently=False,
             )
@@ -38,26 +40,27 @@ class RegisterView(APIView):
 
 class VerifyOTPView(APIView):
     def post(self, request):
-        email = request.data.get('email')
         otp_code = request.data.get('otp')
+        
+        if not otp_code:
+            return Response({'error': 'OTP is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response({'error': 'Invalid email'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            otp = OTP.objects.filter(user=user).last()
+            otp = OTP.objects.get(otp=otp_code)
         except OTP.DoesNotExist:
             return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if otp and otp.otp == otp_code and otp.is_valid():
-            user.is_active = True
-            user.save()
+        if not otp.is_valid():
+            return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response({'message': 'Your account has been activated'}, status=status.HTTP_200_OK)
+        user = otp.user
+        if user.is_active:
+            return Response({'message': 'Account is already active'}, status=status.HTTP_200_OK)
 
-        return Response({'error': 'Invalid or expired OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        user.is_active = True
+        user.save()
+
+        return Response({'message': 'Your account has been activated successfully'}, status=status.HTTP_200_OK)
     
 
 class LoginView(APIView):
