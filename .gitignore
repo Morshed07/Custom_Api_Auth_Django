@@ -1,0 +1,29 @@
+# Django-specific files
+.DS_Store
+*.pyc
+*.pyo
+__pycache__/
+.pytest_cache/
+.tox/
+.coverage
+
+# Media files (replace with your actual media directory)
+media/
+
+# Temporary files
+*.swp
+*.bak
+*~
+
+# Python-specific files
+.python-eggs
+.eggs
+
+# Virtual environment
+venv/
+env/
+.env
+
+# IDE-specific files
+*.vscode/
+*.idea/
