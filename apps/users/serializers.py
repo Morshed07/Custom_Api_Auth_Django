@@ -6,6 +6,7 @@ from django.template.loader import render_to_string
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.html import strip_tags
 from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
 
 from .models import User
 
@@ -87,3 +88,28 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         self.user.set_password(self.validated_data['new_password'])
         self.user.save()
         return self.user
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=8, validators=[validate_password])
+    re_new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, data):
+        user = self.context['request'].user
+
+        # Check if the current password is correct
+        if not user.check_password(data['current_password']):
+            raise serializers.ValidationError({"current_password": "Current password is incorrect."})
+
+        # Check if new password and confirmation match
+        if data['new_password'] != data['re_new_password']:
+            raise serializers.ValidationError({"new_password": "The two password fields didn’t match."})
+
+        return data
+
+    def save(self):
+        user = self.context['request'].user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
