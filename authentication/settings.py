@@ -34,6 +34,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -76,7 +78,17 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'authentication.wsgi.application'
+# WSGI_APPLICATION = 'authentication.wsgi.application'
+ASGI_APPLICATION = 'authentication.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [('redis', 6379)],
+        },
+    },
+}
 
 
 # Database

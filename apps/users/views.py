@@ -5,6 +5,8 @@ from django.core.mail import send_mail
 from .models import OTP
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from django.utils.timezone import now
 from rest_framework.permissions import IsAuthenticated
 import random
@@ -73,7 +75,24 @@ class LoginView(APIView):
 
         if user is not None:
             if user.is_active:
+                # Generate refresh and access tokens
                 refresh = RefreshToken.for_user(user)
+
+                # Check if the user is logging in for the first time
+                if user.is_first_login:
+                    user.is_first_login = False  # Mark as logged in
+                    user.save()
+
+                    # Send notification using Django Channels
+                    channel_layer = get_channel_layer()
+                    async_to_sync(channel_layer.group_send)(
+                        "notifications", {  # Send notification to the 'notifications' group
+                            'type': 'send_notification',
+                            'message': f"User {user.email} has logged in for the first time!"
+                        }
+                    )
+
+                # Return tokens on successful login
                 return Response({
                     'refresh': str(refresh),
                     'access': str(refresh.access_token),
